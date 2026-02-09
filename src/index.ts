@@ -404,6 +404,8 @@ function truncateText(text: string, maxLength: number): string {
 
 // Main router function
 function buildEmbed(eventName: string, payload: GitHubPayload): DiscordEmbed | null {
+  console.log("Building embed for event:", eventName);
+
   switch (eventName) {
     case "pull_request":
       return buildPullRequestEmbed(payload as PullRequestPayload);
@@ -416,6 +418,7 @@ function buildEmbed(eventName: string, payload: GitHubPayload): DiscordEmbed | n
     case "push":
       return buildPushEmbed(payload as PushPayload);
     default:
+      console.log("Unknown event, ignoring:", eventName);
       return null;
   }
 }
@@ -425,31 +428,58 @@ app.post("/github/webhook", async (req: Request, res: Response) => {
   const event = typeof eventHeader === "string" ? eventHeader : Array.isArray(eventHeader) ? eventHeader[0] : undefined;
   const payload = req.body as GitHubPayload;
 
+  console.log("=== Incoming webhook ===");
+  console.log("Event header:", eventHeader);
+  console.log("Event:", event);
+  console.log("Full payload:", JSON.stringify(payload, null, 2));
+
   const repoName: string | undefined = payload?.repository?.name;
+  console.log("Repository name:", repoName);
+  console.log("Available repo keys:", Object.keys(WEBHOOKS));
+  console.log("Environment vars loaded:", {
+    AI: !!process.env.DISCORD_WEBHOOK_AI,
+    CORE: !!process.env.DISCORD_WEBHOOK_CORE,
+    HOMELAND: !!process.env.DISCORD_WEBHOOK_HOMELAND,
+    WEB: !!process.env.DISCORD_WEBHOOK_WEB,
+  });
+
   const webhookUrl = repoName ? WEBHOOKS[repoName] : undefined;
+  console.log("Webhook URL found:", !!webhookUrl);
 
   if (!webhookUrl) {
+    console.log("❌ Repo not mapped or webhook URL not configured");
+    console.log("❌ Looking for repo name:", `"${repoName}"`);
+    console.log("❌ Available mappings:", Object.entries(WEBHOOKS).map(([k, v]) => `${k}: ${v ? 'configured' : 'MISSING'}`));
     return res.status(200).send("Repo not mapped");
   }
 
   if (event === "ping") {
+    console.log("🏓 Ping received, responding with pong");
     return res.send("pong");
   }
 
   if (!event) {
+    console.log("❌ No event header found");
     return res.sendStatus(400);
   }
 
   const embed = buildEmbed(event, payload);
+  console.log("Embed built:", !!embed);
 
   if (!embed) {
+    console.log("⚠️ No embed returned (event ignored)");
     return res.sendStatus(200);
   }
 
   try {
+    console.log("📤 Sending to Discord...");
     await axios.post(webhookUrl, { embeds: [embed] });
+    console.log("✅ Successfully sent to Discord");
   } catch (error) {
-    console.error(`Failed to send webhook for ${repoName}:`, error);
+    console.error(`❌ Failed to send webhook for ${repoName}:`, error);
+    if (error instanceof Error) {
+      console.error("Error details:", error.message);
+    }
   }
 
   res.sendStatus(200);
@@ -457,4 +487,8 @@ app.post("/github/webhook", async (req: Request, res: Response) => {
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
+  console.log("Configured webhooks:");
+  Object.entries(WEBHOOKS).forEach(([repo, url]) => {
+    console.log(`  ${repo}: ${url ? '✓ configured' : '✗ NOT CONFIGURED'}`);
+  });
 });
