@@ -13,17 +13,18 @@ const WEBHOOKS: Record<string, string | undefined> = {
   ai: process.env.DISCORD_WEBHOOK_AI,
   core: process.env.DISCORD_WEBHOOK_CORE,
   homeland: process.env.DISCORD_WEBHOOK_HOMELAND,
+  Homeland: process.env.DISCORD_WEBHOOK_HOMELAND,
   web: process.env.DISCORD_WEBHOOK_WEB,
 };
 
 // Color constants
 const COLORS: { [key: string]: number } = {
-  green: 0x57F287,
-  red: 0xED4245,
-  yellow: 0xFEE75C,
-  blue: 0x3498DB,
-  purple: 0x9B59B6,
-  gray: 0x95A5A6,
+  green: 0x57f287,
+  red: 0xed4245,
+  yellow: 0xfee75c,
+  blue: 0x3498db,
+  purple: 0x9b59b6,
+  gray: 0x95a5a6,
 };
 
 // GitHub webhook payload types
@@ -49,7 +50,13 @@ interface BasePayload {
 }
 
 interface PullRequestPayload extends BasePayload {
-  action: "opened" | "closed" | "edited" | "reopened" | "synchronize" | "merged";
+  action:
+    | "opened"
+    | "closed"
+    | "edited"
+    | "reopened"
+    | "synchronize"
+    | "merged";
   pull_request: {
     title: string;
     html_url: string;
@@ -153,7 +160,9 @@ interface DiscordEmbed {
 }
 
 // Build embed for pull request events
-function buildPullRequestEmbed(payload: PullRequestPayload): DiscordEmbed | null {
+function buildPullRequestEmbed(
+  payload: PullRequestPayload,
+): DiscordEmbed | null {
   const { action, pull_request, repository, sender } = payload;
   const pr = pull_request;
 
@@ -199,7 +208,11 @@ function buildPullRequestEmbed(payload: PullRequestPayload): DiscordEmbed | null
     fields: [
       { name: "Repository", value: repository.name, inline: true },
       { name: "Author", value: pr.user.login, inline: true },
-      { name: "Branch", value: `${pr.head.ref} → ${pr.base.ref}`, inline: false },
+      {
+        name: "Branch",
+        value: `${pr.head.ref} → ${pr.base.ref}`,
+        inline: false,
+      },
     ],
     author: {
       name: sender?.login || pr.user.login,
@@ -316,7 +329,9 @@ function buildReviewEmbed(payload: ReviewPayload): DiscordEmbed | null {
 }
 
 // Build embed for review comment events
-function buildReviewCommentEmbed(payload: ReviewCommentPayload): DiscordEmbed | null {
+function buildReviewCommentEmbed(
+  payload: ReviewCommentPayload,
+): DiscordEmbed | null {
   const { action, comment, repository, sender } = payload;
 
   if (action !== "created") {
@@ -366,11 +381,15 @@ function buildPushEmbed(payload: PushPayload): DiscordEmbed | null {
   const commitMessages = commits
     ? commits
         .slice(0, 3)
-        .map((c) => `• \`${c.id.substring(0, 7)}\` ${truncateText(c.message.split("\n")[0] || "", 60)}`)
+        .map(
+          (c) =>
+            `• \`${c.id.substring(0, 7)}\` ${truncateText(c.message.split("\n")[0] || "", 60)}`,
+        )
         .join("\n")
     : "";
 
-  const moreCommits = commitCount > 3 ? `\n... and ${commitCount - 3} more` : "";
+  const moreCommits =
+    commitCount > 3 ? `\n... and ${commitCount - 3} more` : "";
 
   let url: string | undefined = compare;
   if (!url && repository.full_name && before && after) {
@@ -403,7 +422,10 @@ function truncateText(text: string, maxLength: number): string {
 }
 
 // Main router function
-function buildEmbed(eventName: string, payload: GitHubPayload): DiscordEmbed | null {
+function buildEmbed(
+  eventName: string,
+  payload: GitHubPayload,
+): DiscordEmbed | null {
   console.log("Building embed for event:", eventName);
 
   switch (eventName) {
@@ -425,7 +447,12 @@ function buildEmbed(eventName: string, payload: GitHubPayload): DiscordEmbed | n
 
 app.post("/github/webhook", async (req: Request, res: Response) => {
   const eventHeader = req.headers["x-github-event"];
-  const event = typeof eventHeader === "string" ? eventHeader : Array.isArray(eventHeader) ? eventHeader[0] : undefined;
+  const event =
+    typeof eventHeader === "string"
+      ? eventHeader
+      : Array.isArray(eventHeader)
+        ? eventHeader[0]
+        : undefined;
   const payload = req.body as GitHubPayload;
 
   console.log("=== Incoming webhook ===");
@@ -449,7 +476,12 @@ app.post("/github/webhook", async (req: Request, res: Response) => {
   if (!webhookUrl) {
     console.log("❌ Repo not mapped or webhook URL not configured");
     console.log("❌ Looking for repo name:", `"${repoName}"`);
-    console.log("❌ Available mappings:", Object.entries(WEBHOOKS).map(([k, v]) => `${k}: ${v ? 'configured' : 'MISSING'}`));
+    console.log(
+      "❌ Available mappings:",
+      Object.entries(WEBHOOKS).map(
+        ([k, v]) => `${k}: ${v ? "configured" : "MISSING"}`,
+      ),
+    );
     return res.status(200).send("Repo not mapped");
   }
 
@@ -489,6 +521,6 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log("Configured webhooks:");
   Object.entries(WEBHOOKS).forEach(([repo, url]) => {
-    console.log(`  ${repo}: ${url ? '✓ configured' : '✗ NOT CONFIGURED'}`);
+    console.log(`  ${repo}: ${url ? "✓ configured" : "✗ NOT CONFIGURED"}`);
   });
 });
