@@ -1,0 +1,23 @@
+{
+  "ref": "refs/heads/feature/test",
+  "before": "aaaaaaa",
+  "after": "bbbbbbb",
+  "compare": "https://github.com/test/ai/compare/aaaaaaa...bbbbbbb",
+  "pusher": {
+    "name": "ferostzz"
+  },
+  "commits": [
+    {
+      "id": "abc123456789",
+      "message": "Initial commit"
+    },
+    {
+      "id": "def987654321",
+      "message": "Add webhook support"
+    }
+  ],
+  "repository": {
+    "name": "core",
+    "full_name": "test/core"
+  }
+}
